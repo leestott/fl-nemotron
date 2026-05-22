@@ -8,7 +8,7 @@ openai>=1.30.0
 # ── Audio capture ─────────────────────────────────────────────────────────────
 sounddevice>=0.4.6                # cross-platform microphone I/O
 numpy>=1.26.0                     # audio array processing
-scipy>=1.13.0                     # WAV file writing (scipy.io.wavfile)
+scipy>=1.17.1                     # WAV file writing (scipy.io.wavfile)
 
 # ── Text-to-speech ────────────────────────────────────────────────────────────
 pyttsx3>=2.90                     # offline TTS — Windows (SAPI5), macOS (NSSpeech), Linux (espeak)
