@@ -25,5 +25,5 @@ rich>=13.7.0                      # coloured console output, panels, syntax high
 
 # ── Web UI (FastAPI chat interface) ───────────────────────────────────────────
 fastapi>=0.111.0                  # web framework
-uvicorn[standard]>=0.29.0         # ASGI server
+uvicorn[standard]>=0.47.0         # ASGI server
 python-multipart>=0.0.9           # multipart/form-data for audio upload endpoint
