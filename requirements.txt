@@ -1,29 +1,31 @@
 # ── Core AI runtime ───────────────────────────────────────────────────────────
-# Latest SDK package from foundrylocal.ai
-foundry-local-sdk>=1.1.0
-
-# OpenAI-compatible client (points at local Foundry endpoint — no key required)
-openai>=1.30.0
+# Foundry Local Python SDK — see https://foundrylocal.ai
+#
+# NOTE: SDK 1.1.0+ is REQUIRED for the NVIDIA Nemotron Speech Streaming model.
+# Earlier versions (0.5.x) cannot parse the newer catalog entries and the model
+# will appear missing. The 1.1.x SDK also bundles the foundry-local-core native
+# runtime as a pip wheel — no separate winget/MSI install needed.
+foundry-local-sdk>=1.1.0,<2
 
 # ── Audio capture ─────────────────────────────────────────────────────────────
-sounddevice>=0.4.6                # cross-platform microphone I/O
+sounddevice>=0.5.5                # cross-platform microphone I/O
 numpy>=2.4.6                     # audio array processing
-scipy>=1.13.0                     # WAV file writing (scipy.io.wavfile)
+scipy>=1.17.1                     # WAV file writing (scipy.io.wavfile)
 
 # ── Text-to-speech ────────────────────────────────────────────────────────────
-pyttsx3>=2.90                     # offline TTS — Windows (SAPI5), macOS (NSSpeech), Linux (espeak)
+pyttsx3>=2.99                     # offline TTS — Windows (SAPI5), macOS (NSSpeech), Linux (espeak)
 
 # edge-tts is optional: neural voices but requires network access
 # Uncomment the next line to enable edge-tts support:
 # edge-tts>=6.1.9
 
 # ── Environment and config ────────────────────────────────────────────────────
-python-dotenv>=1.0.0              # loads .env into os.environ
+python-dotenv>=1.2.2              # loads .env into os.environ
 
 # ── Terminal UI ───────────────────────────────────────────────────────────────
-rich>=13.7.0                      # coloured console output, panels, syntax highlighting
+rich>=15.0.0                      # coloured console output, panels, syntax highlighting
 
 # ── Web UI (FastAPI chat interface) ───────────────────────────────────────────
-fastapi>=0.111.0                  # web framework
+fastapi>=0.136.1                  # web framework
 uvicorn[standard]>=0.29.0         # ASGI server
-python-multipart>=0.0.9           # multipart/form-data for audio upload endpoint
+python-multipart>=0.0.29           # multipart/form-data for audio upload endpoint

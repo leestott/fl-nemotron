@@ -4,7 +4,7 @@ speech_handler.py — Microphone capture, voice activity detection, and TTS outp
 Handles:
   - Recording audio from the microphone (sounddevice)
   - Voice activity detection (silence-based auto-stop)
-  - Writing captured audio to a temp WAV file for Whisper
+  - Writing captured audio to a temp WAV file for transcription
   - Text-to-speech output via pyttsx3 (offline) or edge-tts (online, richer voices)
 """
 
@@ -118,7 +118,7 @@ class MicrophoneRecorder:
 
         if not recording:
             logger.warning("No speech detected in recording window")
-            # Return a near-silent file so Whisper can return an empty string
+            # Return a near-silent file so the STT model can return an empty string
             silent = np.zeros(
                 (int(self._cfg.sample_rate * 0.5), self._cfg.channels), dtype="float32"
             )
