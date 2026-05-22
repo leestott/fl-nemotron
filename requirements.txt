@@ -18,7 +18,7 @@ pyttsx3>=2.90                     # offline TTS — Windows (SAPI5), macOS (NSSp
 # edge-tts>=6.1.9
 
 # ── Environment and config ────────────────────────────────────────────────────
-python-dotenv>=1.0.0              # loads .env into os.environ
+python-dotenv>=1.2.2              # loads .env into os.environ
 
 # ── Terminal UI ───────────────────────────────────────────────────────────────
 rich>=13.7.0                      # coloured console output, panels, syntax highlighting
