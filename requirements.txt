@@ -3,7 +3,7 @@
 foundry-local-sdk>=1.1.0
 
 # OpenAI-compatible client (points at local Foundry endpoint — no key required)
-openai>=1.30.0
+openai>=2.38.0
 
 # ── Audio capture ─────────────────────────────────────────────────────────────
 sounddevice>=0.4.6                # cross-platform microphone I/O
