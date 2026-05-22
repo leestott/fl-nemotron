@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nemotron Voice Assistant · Foundry Local</title>
+<style>
+:root {
+  --bg:            #0d0d1a;
+  --surface:       #1a1a2e;
+  --panel:         #16213e;
+  --border:        #2a2a4a;
+  --primary:       #7c3aed;
+  --primary-light: #a78bfa;
+  --accent:        #10b981;
+  --accent-light:  #34d399;
+  --text:          #e2e8f0;
+  --text-muted:    #8892a4;
+  --user-bg:       #1e3a5f;
+  --user-border:   #3b82f6;
+  --bot-bg:        #1a1030;
+  --bot-border:    #7c3aed;
+  --error:         #ef4444;
+  --warning:       #f59e0b;
+  --radius:        12px;
+  --mono: 'Cascadia Code','Fira Code','JetBrains Mono',Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;display:flex;flex-direction:column}
+
+/* ─── Header ─── */
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:14px;flex-shrink:0;z-index:10}
+.logo{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.header-info h1{font-size:15px;font-weight:700;letter-spacing:-.01em}
+.header-info p{font-size:11px;color:var(--text-muted);margin-top:1px}
+.header-badges{display:flex;gap:8px;margin-left:auto;align-items:center}
+.badge{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:500;border:1px solid var(--border);background:var(--panel);white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--text-muted);flex-shrink:0;transition:all .3s}
+.dot.live{background:var(--accent);box-shadow:0 0 7px var(--accent)}
+.dot.demo{background:var(--warning)}
+.dot.err{background:var(--error)}
+
+/* ─── Demo Banner ─── */
+.demo-banner{background:rgba(245,158,11,.1);border-bottom:1px solid rgba(245,158,11,.25);padding:7px 20px;font-size:12px;color:var(--warning);display:none;align-items:center;gap:8px;flex-shrink:0}
+.demo-banner.on{display:flex}
+.demo-banner code{background:rgba(0,0,0,.3);padding:1px 6px;border-radius:3px;font-family:var(--mono);font-size:11px}
+
+/* ─── Layout ─── */
+.layout{display:flex;flex:1;overflow:hidden;min-height:0}
+
+/* ─── Sidebar ─── */
+.sidebar{width:210px;background:var(--panel);border-right:1px solid var(--border);padding:14px;display:flex;flex-direction:column;gap:14px;flex-shrink:0;overflow-y:auto}
+.sidebar h3{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:8px}
+.model-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+.model-card-row{display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.model-label{font-size:12px;font-weight:600}
+.model-tag{font-size:9px;background:var(--panel);color:var(--text-muted);padding:2px 6px;border-radius:4px;margin-left:auto;font-family:var(--mono)}
+.model-alias{font-size:10px;color:var(--text-muted);font-family:var(--mono);padding-left:14px}
+.slider-group{display:flex;flex-direction:column;gap:12px}
+.slider-row label{display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:4px}
+.slider-row label span{color:var(--primary-light);font-family:var(--mono)}
+input[type=range]{width:100%;accent-color:var(--primary);height:4px}
+.btn-clear{width:100%;padding:8px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--text-muted);font-size:12px;cursor:pointer;transition:all .2s}
+.btn-clear:hover{border-color:var(--primary);color:var(--primary-light)}
+.sidebar-footer{margin-top:auto;padding-top:10px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);line-height:1.6}
+.sidebar-footer a{color:var(--primary-light);text-decoration:none}
+
+/* ─── Chat ─── */
+.chat{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px;scroll-behavior:smooth}
+.messages::-webkit-scrollbar{width:5px}
+.messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* Message bubbles */
+.msg{display:flex;flex-direction:column;max-width:78%;animation:fadeUp .2s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.msg.user{align-self:flex-end}
+.msg.assistant{align-self:flex-start}
+.msg.system{align-self:center;max-width:90%}
+.msg-role{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;padding:0 4px}
+.msg.user .msg-role{color:#93c5fd;text-align:right}
+.msg.assistant .msg-role{color:var(--primary-light)}
+.bubble{padding:12px 16px;border-radius:var(--radius);font-size:14px;line-height:1.65;position:relative;word-break:break-word}
+.msg.user .bubble{background:var(--user-bg);border:1px solid var(--user-border);border-bottom-right-radius:4px}
+.msg.assistant .bubble{background:var(--bot-bg);border:1px solid var(--bot-border);border-bottom-left-radius:4px}
+.msg.system .bubble{background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.2);border-radius:var(--radius);color:var(--text-muted);font-size:13px;font-style:italic;text-align:center}
+
+/* Inline code & pre */
+.bubble code{font-family:var(--mono);background:rgba(0,0,0,.4);padding:1px 5px;border-radius:3px;color:#a5f3fc;font-size:13px}
+.bubble pre{background:rgba(0,0,0,.4);border-left:3px solid var(--primary);padding:12px 14px;border-radius:0 6px 6px 0;margin:8px 0;overflow-x:auto}
+.bubble pre code{background:none;padding:0;color:#a5f3fc}
+
+/* Typing cursor */
+.cursor{display:inline-block;width:2px;height:.9em;background:var(--primary-light);margin-left:2px;vertical-align:text-bottom;animation:blink .65s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* Copy button */
+.copy-btn{position:absolute;top:7px;right:8px;background:transparent;border:none;color:var(--text-muted);cursor:pointer;font-size:11px;padding:3px 7px;border-radius:4px;opacity:0;transition:opacity .2s}
+.bubble:hover .copy-btn{opacity:1}
+.copy-btn:hover{background:var(--border);color:var(--text)}
+
+/* ─── Input area ─── */
+.input-wrap{flex-shrink:0;padding:14px 18px;background:var(--surface);border-top:1px solid var(--border)}
+.mic-status{font-size:11px;color:var(--text-muted);min-height:16px;margin-bottom:6px;text-align:center}
+.input-row{display:flex;gap:10px;align-items:flex-end}
+.mic-btn{width:44px;height:44px;border-radius:50%;border:2px solid var(--border);background:var(--panel);color:var(--text-muted);cursor:pointer;font-size:19px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.mic-btn:hover{border-color:var(--accent);color:var(--accent)}
+.mic-btn.rec{background:rgba(239,68,68,.12);border-color:var(--error);color:var(--error);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}50%{box-shadow:0 0 0 9px rgba(239,68,68,0)}}
+.textarea-wrap{flex:1;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);display:flex;align-items:flex-end;padding:4px 4px 4px 14px;transition:border-color .2s}
+.textarea-wrap:focus-within{border-color:var(--primary)}
+textarea{flex:1;background:transparent;border:none;color:var(--text);font-family:inherit;font-size:14px;line-height:1.5;resize:none;outline:none;min-height:22px;max-height:120px;padding:7px 0;overflow-y:auto}
+textarea::placeholder{color:var(--text-muted)}
+.send-btn{width:38px;height:38px;border-radius:8px;border:none;background:var(--primary);color:#fff;cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.send-btn:hover{background:#6d28d9}
+.send-btn:disabled{opacity:.35;cursor:not-allowed}
+
+@media(max-width:600px){.sidebar{display:none}}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="logo">🤖</div>
+  <div class="header-info">
+    <h1>Nemotron Voice Assistant</h1>
+    <p>Microsoft Foundry Local · On-device AI</p>
+  </div>
+  <div class="header-badges">
+    <div class="badge"><div class="dot" id="dot-n"></div><span id="lbl-n">Nemotron</span></div>
+    <div class="badge"><div class="dot" id="dot-w"></div><span id="lbl-w">Whisper</span></div>
+    <div class="badge" id="mode-badge" style="border-color:var(--warning);color:var(--warning);display:none">⚠ Demo Mode</div>
+  </div>
+</header>
+
+<!-- Demo banner -->
+<div class="demo-banner" id="demo-banner">
+  ⚠ <strong>Demo mode</strong> — Foundry Local is not running. Responses are simulated.
+  Install with: <code>winget install Microsoft.FoundryLocal</code> then
+  <code>foundry model run nemotron-nano</code> and restart.
+</div>
+
+<!-- Main layout -->
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div>
+      <h3>Models</h3>
+      <div class="model-card">
+        <div class="model-card-row"><div class="dot" id="sdot-n"></div><span class="model-label">Nemotron</span><span class="model-tag">LLM</span></div>
+        <div class="model-alias" id="alias-n">nemotron-nano</div>
+      </div>
+      <div class="model-card">
+        <div class="model-card-row"><div class="dot" id="sdot-w"></div><span class="model-label">Whisper</span><span class="model-tag">STT</span></div>
+        <div class="model-alias" id="alias-w">whisper-base</div>
+      </div>
+    </div>
+
+    <div>
+      <h3>Generation</h3>
+      <div class="slider-group">
+        <div class="slider-row">
+          <label>Max Tokens<span id="vt">256</span></label>
+          <input type="range" id="max-tokens" min="64" max="1024" value="256" step="32" oninput="document.getElementById('vt').textContent=this.value">
+        </div>
+        <div class="slider-row">
+          <label>Temperature<span id="vtemp">0.70</span></label>
+          <input type="range" id="temperature" min="0" max="1" value="0.7" step="0.05" oninput="document.getElementById('vtemp').textContent=parseFloat(this.value).toFixed(2)">
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <h3>Conversation</h3>
+      <button class="btn-clear" onclick="clearChat()">🗑 Clear history</button>
+    </div>
+
+    <div class="sidebar-footer">
+      All AI runs locally.<br>
+      No data leaves your device.<br><br>
+      <a href="https://learn.microsoft.com/en-us/azure/foundry-local/" target="_blank">Foundry Local docs ↗</a><br>
+      <a href="https://developer.nvidia.com/nemotron" target="_blank">NVIDIA Nemotron ↗</a><br>
+      <a href="/docs" target="_blank">API docs ↗</a>
+    </div>
+  </aside>
+
+  <!-- Chat column -->
+  <div class="chat">
+    <div class="messages" id="messages"></div>
+
+    <div class="input-wrap">
+      <div class="mic-status" id="mic-status"></div>
+      <div class="input-row">
+        <button class="mic-btn" id="mic-btn" onclick="toggleMic()" title="Record voice (click to start/stop)">🎤</button>
+        <div class="textarea-wrap">
+          <textarea id="inp" placeholder="Ask anything… or click 🎤 to speak" rows="1"
+            onkeydown="handleKey(event)" oninput="resize(this)"></textarea>
+          <button class="send-btn" id="send-btn" onclick="send()" title="Send (Enter)">↑</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /layout -->
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────
+const history = [];          // [{role,content}]
+let streaming = false;
+let mediaRec = null, audioChunks = [], recording = false;
+const SYSTEM = "You are a concise, helpful voice assistant powered by NVIDIA Nemotron running locally via Microsoft Foundry Local. Keep answers under 3 sentences unless the user requests more detail. Be direct and conversational.";
+
+// ─── Boot ─────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadStatus();
+  addMsg('system', "👋 Welcome! I'm Nemotron, running entirely on your device via Microsoft Foundry Local. Ask me anything — your audio and data never leave this machine.");
+  document.getElementById('inp').focus();
+});
+
+async function loadStatus() {
+  try {
+    const r = await fetch('/api/status');
+    const d = await r.json();
+    const cls = d.demo ? 'demo' : 'live';
+    ['dot-n','dot-w','sdot-n','sdot-w'].forEach(id => {
+      const el = document.getElementById(id);
+      el.className = 'dot ' + cls;
+    });
+    document.getElementById('lbl-n').textContent = d.models.nemotron.alias;
+    document.getElementById('lbl-w').textContent  = d.models.whisper.alias;
+    document.getElementById('alias-n').textContent = d.models.nemotron.alias;
+    document.getElementById('alias-w').textContent  = d.models.whisper.alias;
+    if (d.demo) {
+      document.getElementById('demo-banner').classList.add('on');
+      document.getElementById('mode-badge').style.display = 'flex';
+    }
+  } catch {
+    ['dot-n','dot-w','sdot-n','sdot-w'].forEach(id => {
+      document.getElementById(id).className = 'dot err';
+    });
+  }
+}
+
+// ─── Message rendering ─────────────────────────────────────────────────────
+function addMsg(role, text) {
+  const wrap = document.createElement('div');
+  wrap.className = `msg ${role}`;
+  if (role !== 'system') {
+    const r = document.createElement('div');
+    r.className = 'msg-role';
+    r.textContent = role === 'user' ? 'You' : 'Nemotron';
+    wrap.appendChild(r);
+  }
+  const b = document.createElement('div');
+  b.className = 'bubble';
+  b.innerHTML = md(text);
+  if (role === 'assistant') b.appendChild(copyBtn(text));
+  wrap.appendChild(b);
+  document.getElementById('messages').appendChild(wrap);
+  scrollBottom();
+  return b;
+}
+
+function copyBtn(text) {
+  const btn = document.createElement('button');
+  btn.className = 'copy-btn';
+  btn.textContent = '⎘ Copy';
+  btn.onclick = () => { navigator.clipboard.writeText(text); btn.textContent = '✓ Copied'; setTimeout(()=>btn.textContent='⎘ Copy',1500); };
+  return btn;
+}
+
+function startStreamBubble() {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg assistant';
+  const r = document.createElement('div');
+  r.className = 'msg-role';
+  r.textContent = 'Nemotron';
+  wrap.appendChild(r);
+  const b = document.createElement('div');
+  b.className = 'bubble';
+  const cur = document.createElement('span');
+  cur.className = 'cursor';
+  cur.id = 'cur';
+  b.appendChild(cur);
+  wrap.appendChild(b);
+  document.getElementById('messages').appendChild(wrap);
+  scrollBottom();
+  return b;
+}
+
+// Minimal markdown → HTML (bold, italic, inline code, code blocks, line breaks)
+function md(text) {
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/```([\s\S]*?)```/g, (_,c) => `<pre><code>${c.trim()}</code></pre>`)
+    .replace(/`([^`]+)`/g, (_,c) => `<code>${c}</code>`)
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(/\n/g,'<br>');
+}
+
+function scrollBottom() {
+  const m = document.getElementById('messages');
+  m.scrollTop = m.scrollHeight;
+}
+
+// ─── Send ──────────────────────────────────────────────────────────────────
+async function send(injected) {
+  const inp = document.getElementById('inp');
+  const text = (injected || inp.value).trim();
+  if (!text || streaming) return;
+  inp.value = ''; resize(inp); inp.focus();
+
+  history.push({role:'user', content:text});
+  addMsg('user', text);
+
+  streaming = true;
+  document.getElementById('send-btn').disabled = true;
+
+  const messages = [{role:'system',content:SYSTEM}, ...history];
+  const bubble = startStreamBubble();
+  let full = '';
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({messages, stream:true}),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, {stream:true});
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const payload = line.slice(6).trim();
+        if (payload === '[DONE]') break;
+        try {
+          const {token, error} = JSON.parse(payload);
+          if (error) throw new Error(error);
+          if (token) {
+            full += token;
+            const cur = document.getElementById('cur');
+            bubble.innerHTML = md(full);
+            const newCur = document.createElement('span');
+            newCur.className = 'cursor'; newCur.id = 'cur';
+            bubble.appendChild(newCur);
+            scrollBottom();
+          }
+        } catch(e) { /* skip bad frames */ }
+      }
+    }
+  } catch(err) {
+    full = `⚠️ Error: ${err.message}`;
+    bubble.innerHTML = md(full);
+  } finally {
+    const cur = document.getElementById('cur');
+    if (cur) cur.remove();
+    if (full && !full.startsWith('⚠️')) bubble.appendChild(copyBtn(full));
+    history.push({role:'assistant', content:full});
+    document.getElementById('send-btn').disabled = false;
+    streaming = false;
+    scrollBottom();
+  }
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+}
+
+function resize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function clearChat() {
+  history.length = 0;
+  document.getElementById('messages').innerHTML = '';
+  addMsg('system','🗑 History cleared — start a new conversation!');
+}
+
+// ─── Microphone ────────────────────────────────────────────────────────────
+async function toggleMic() {
+  if (recording) { stopMic(); } else { await startMic(); }
+}
+
+async function startMic() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    audioChunks = [];
+    mediaRec = new MediaRecorder(stream);
+    mediaRec.ondataavailable = e => audioChunks.push(e.data);
+    mediaRec.onstop = async () => {
+      stream.getTracks().forEach(t=>t.stop());
+      await transcribeAudio();
+    };
+    mediaRec.start();
+    recording = true;
+    document.getElementById('mic-btn').classList.add('rec');
+    document.getElementById('mic-btn').textContent = '⏹';
+    setMicStatus('🔴 Recording… click ⏹ to stop');
+  } catch {
+    setMicStatus('⚠️ Microphone access denied — check browser permissions');
+  }
+}
+
+function stopMic() {
+  if (mediaRec && recording) {
+    mediaRec.stop();
+    recording = false;
+    document.getElementById('mic-btn').classList.remove('rec');
+    document.getElementById('mic-btn').textContent = '🎤';
+    setMicStatus('⏳ Transcribing audio…');
+  }
+}
+
+async function transcribeAudio() {
+  const blob = new Blob(audioChunks, {type:'audio/webm'});
+  const fd = new FormData();
+  fd.append('audio', blob, 'recording.webm');
+  try {
+    const res = await fetch('/api/transcribe', {method:'POST', body:fd});
+    const d = await res.json();
+    const text = (d.text||'').trim();
+    if (text) {
+      setMicStatus(`✓ "${text}"`);
+      setTimeout(()=>setMicStatus(''), 3500);
+      send(text);
+    } else {
+      setMicStatus('⚠️ No speech detected — try again');
+      setTimeout(()=>setMicStatus(''), 3000);
+    }
+  } catch(err) {
+    setMicStatus(`⚠️ Transcription error: ${err.message}`);
+    setTimeout(()=>setMicStatus(''), 4000);
+  }
+}
+
+function setMicStatus(msg) { document.getElementById('mic-status').textContent = msg; }
+</script>
+</body>
+</html>

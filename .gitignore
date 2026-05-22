@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Private keys and cert bundles
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Temporary audio files
+audio_samples/*.wav
+audio_samples/*.mp3
+
+# Blog content and generated artifacts
+blog/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Foundry Local model cache (large — do not commit)
+.foundry/
+foundry_local_cache/
+
+# Pytest
+.pytest_cache/
+htmlcov/
+.coverage

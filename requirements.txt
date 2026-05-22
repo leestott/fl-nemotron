@@ -1,0 +1,29 @@
+# ── Core AI runtime ───────────────────────────────────────────────────────────
+# Latest SDK package from foundrylocal.ai
+foundry-local-sdk>=1.1.0
+
+# OpenAI-compatible client (points at local Foundry endpoint — no key required)
+openai>=1.30.0
+
+# ── Audio capture ─────────────────────────────────────────────────────────────
+sounddevice>=0.4.6                # cross-platform microphone I/O
+numpy>=1.26.0                     # audio array processing
+scipy>=1.13.0                     # WAV file writing (scipy.io.wavfile)
+
+# ── Text-to-speech ────────────────────────────────────────────────────────────
+pyttsx3>=2.90                     # offline TTS — Windows (SAPI5), macOS (NSSpeech), Linux (espeak)
+
+# edge-tts is optional: neural voices but requires network access
+# Uncomment the next line to enable edge-tts support:
+# edge-tts>=6.1.9
+
+# ── Environment and config ────────────────────────────────────────────────────
+python-dotenv>=1.0.0              # loads .env into os.environ
+
+# ── Terminal UI ───────────────────────────────────────────────────────────────
+rich>=13.7.0                      # coloured console output, panels, syntax highlighting
+
+# ── Web UI (FastAPI chat interface) ───────────────────────────────────────────
+fastapi>=0.111.0                  # web framework
+uvicorn[standard]>=0.29.0         # ASGI server
+python-multipart>=0.0.9           # multipart/form-data for audio upload endpoint
