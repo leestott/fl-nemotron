@@ -1,9 +1,11 @@
 # ── Core AI runtime ───────────────────────────────────────────────────────────
-# Latest SDK package from foundrylocal.ai
-foundry-local-sdk>=1.1.0
-
-# OpenAI-compatible client (points at local Foundry endpoint — no key required)
-openai>=1.30.0
+# Foundry Local Python SDK — see https://foundrylocal.ai
+#
+# NOTE: SDK 1.1.0+ is REQUIRED for the NVIDIA Nemotron Speech Streaming model.
+# Earlier versions (0.5.x) cannot parse the newer catalog entries and the model
+# will appear missing. The 1.1.x SDK also bundles the foundry-local-core native
+# runtime as a pip wheel — no separate winget/MSI install needed.
+foundry-local-sdk>=1.1.0,<2
 
 # ── Audio capture ─────────────────────────────────────────────────────────────
 sounddevice>=0.4.6                # cross-platform microphone I/O

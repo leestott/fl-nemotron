@@ -28,7 +28,7 @@ from typing import AsyncIterator
 import uvicorn
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -61,7 +61,7 @@ def _init_ai_client() -> None:
         client.initialize()
         _ai_client = client
         _demo_mode = False
-        logger.info("Foundry Local initialised — running Nemotron + Whisper on-device")
+        logger.info("Foundry Local initialised — running Nemotron chat + Nemotron STT on-device")
     except Exception as exc:
         logger.warning("Foundry Local unavailable (%s) — starting in demo mode", exc)
         _ai_client = DemoClient()
@@ -126,8 +126,8 @@ async def status() -> dict:
                 "alias": config.nemotron.model_alias,
                 "loaded": not _demo_mode,
             },
-            "whisper": {
-                "alias": config.whisper.model_alias,
+            "stt": {
+                "alias": config.stt.model_alias,
                 "loaded": not _demo_mode,
             },
         },
@@ -202,12 +202,13 @@ async def _sse_generator(messages: list[dict]) -> AsyncIterator[str]:
 
 
 @app.post("/api/transcribe")
-async def transcribe(audio: UploadFile = File(...)) -> dict:
+async def transcribe(audio: UploadFile = File(...)):
     """
-    Accept an audio file (WebM/WAV/MP3) and return the transcription.
-    In demo mode returns a rotating sample phrase.
-    In Foundry mode passes the audio to the local Whisper model.
+    Accept an audio file (WebM/WAV/MP3) and return the transcription via the
+    local NVIDIA Nemotron Speech Streaming model.
     """
+    from foundry_client import NemotronSTTUnsupportedError
+
     suffix = Path(audio.filename or "audio.webm").suffix or ".webm"
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
         tmp.write(await audio.read())
@@ -215,9 +216,24 @@ async def transcribe(audio: UploadFile = File(...)) -> dict:
 
     try:
         loop = asyncio.get_event_loop()
-        text = await loop.run_in_executor(
-            None, _ai_client.transcribe, tmp_path
-        )
+        try:
+            text = await loop.run_in_executor(
+                None, _ai_client.transcribe, tmp_path
+            )
+        except NemotronSTTUnsupportedError as exc:
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "error": "nemotron_stt_unsupported",
+                    "message": str(exc),
+                },
+            )
+        except Exception as exc:
+            logger.exception("Transcription failed")
+            return JSONResponse(
+                status_code=500,
+                content={"error": "transcription_failed", "message": str(exc)},
+            )
         return {"text": text or ""}
     finally:
         try:

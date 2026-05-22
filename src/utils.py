@@ -32,15 +32,25 @@ def rms_of_wav(path: str | Path) -> float:
 
 
 def list_available_models() -> None:
-    """Print all models available in the local Foundry catalog."""
+    """Print all models available in the local Foundry catalog (via the SDK).
+
+    Requires foundry-local-sdk >= 1.1.0.
+    """
     from foundry_local_sdk import Configuration, FoundryLocalManager  # type: ignore
-    config = Configuration(app_name="model-lister")
-    FoundryLocalManager.initialize(config)
+    FoundryLocalManager.initialize(Configuration(app_name="fl-nemotron-list"))
     manager = FoundryLocalManager.instance
+    models = manager.catalog.list_models()
     print("\nAvailable models in Foundry Local catalog:")
-    print("─" * 60)
-    for model in manager.catalog.list_models():
-        print(f"  {model.alias:<35}  {model.description or ''}")
+    print("─" * 78)
+    print(f"  {'ALIAS':<38}  {'INPUT':<10}  {'OUTPUT':<10}  CACHED")
+    print("─" * 78)
+    seen: set[str] = set()
+    for m in sorted(models, key=lambda x: x.alias):
+        if m.alias in seen:
+            continue
+        seen.add(m.alias)
+        cached = "✓" if m.is_cached else " "
+        print(f"  {m.alias:<38}  {(m.input_modalities or ''):<10}  {(m.output_modalities or ''):<10}  {cached}")
     print()
 
 

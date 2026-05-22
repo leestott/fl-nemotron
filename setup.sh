@@ -56,39 +56,22 @@ source .venv/bin/activate
 pip install --upgrade pip --quiet
 
 # ── 5. Install Python dependencies ────────────────────────────────────────────
-echo -e "${YELLOW}Installing Python dependencies ...${NC}"
-pip install foundry-local-sdk openai sounddevice numpy scipy pyttsx3 python-dotenv rich --quiet
+echo -e "${YELLOW}Installing Python dependencies (foundry-local-sdk >= 1.1.0 required) ...${NC}"
+pip install --upgrade 'foundry-local-sdk>=1.1.0,<2' --quiet
+pip install -r requirements.txt --quiet
 echo -e "${GREEN}[OK] Python dependencies installed${NC}"
 
-# ── 6. Install Foundry Local CLI ──────────────────────────────────────────────
-echo -e "${YELLOW}Checking Foundry Local CLI ...${NC}"
-if ! command -v foundry &>/dev/null; then
-    if [[ "$(uname -s)" == "Darwin" ]]; then
-        echo "  Installing via Homebrew ..."
-        brew install microsoft/foundrylocal/foundrylocal
-    else
-        echo "  Installing via install script ..."
-        curl -fsSL https://aka.ms/foundry-local/install | bash
-    fi
-    echo -e "${GREEN}[OK] Foundry Local CLI installed${NC}"
-else
-    echo -e "${GREEN}[OK] Foundry Local CLI already installed${NC}"
-fi
-
-# ── 7. Pre-download models ────────────────────────────────────────────────────
+# ── 6. Pre-download models via the Foundry Local SDK ──────────────────────────
 echo ""
-echo -e "${YELLOW}Pre-downloading AI models (this may take several minutes) ...${NC}"
-echo -e "  Models are cached locally — download only happens once."
+echo -e "${YELLOW}Pre-downloading AI models via the SDK (cached locally; one-time) ...${NC}"
 echo ""
 read -r -p "Download models now? (Y/n): " DOWNLOAD_MODELS
 if [[ "$DOWNLOAD_MODELS" != "n" && "$DOWNLOAD_MODELS" != "N" ]]; then
-    echo -e "${CYAN}  Downloading whisper-base ...${NC}"
-    foundry model run whisper-base --non-interactive 2>/dev/null || true
-    echo -e "${GREEN}  [OK] whisper-base ready${NC}"
+    CHAT_ALIAS="${LLM_MODEL:-qwen2.5-0.5b}"
+    STT_ALIAS="${STT_MODEL:-nemotron-speech-streaming-en-0.6b}"
 
-    echo -e "${CYAN}  Downloading nemotron-nano ...${NC}"
-    foundry model run nemotron-nano --non-interactive 2>/dev/null || true
-    echo -e "${GREEN}  [OK] nemotron-nano ready${NC}"
+    echo -e "${CYAN}  Prefetching ${STT_ALIAS} and ${CHAT_ALIAS} via SDK ...${NC}"
+    python scripts/prefetch.py "${STT_ALIAS}" "${CHAT_ALIAS}"
 fi
 
 # ── 8. Create .env from template ──────────────────────────────────────────────

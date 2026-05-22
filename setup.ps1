@@ -42,47 +42,24 @@ Write-Host "Upgrading pip ..." -ForegroundColor Yellow
 python -m pip install --upgrade pip --quiet
 
 # ── 5. Install dependencies ───────────────────────────────────────────────────
-Write-Host "Installing dependencies ..." -ForegroundColor Yellow
+Write-Host "Installing dependencies (foundry-local-sdk >= 1.1.0 required) ..." -ForegroundColor Yellow
+pip install --upgrade "foundry-local-sdk>=1.1.0,<2" --quiet
+Write-Host "  [OK] foundry-local-sdk (>=1.1.0) installed" -ForegroundColor Green
 
-# On Windows, use WinML variant for hardware acceleration (NPU/GPU)
-$hasGpu = (Get-CimInstance Win32_VideoController | Where-Object { $_.Name -match "NVIDIA|AMD|Intel Arc" })
-if ($hasGpu) {
-    Write-Host "  GPU detected ($($hasGpu[0].Name)) — installing foundry-local-sdk-winml" -ForegroundColor Cyan
-    pip install foundry-local-sdk-winml --quiet
-} else {
-    Write-Host "  No dedicated GPU detected — installing foundry-local-sdk (CPU)" -ForegroundColor Yellow
-    pip install foundry-local-sdk --quiet
-}
-
-# Install remaining requirements (excluding foundry-local-sdk line already handled)
-pip install openai sounddevice numpy scipy pyttsx3 python-dotenv rich --quiet
+pip install -r requirements.txt --quiet
 Write-Host "[OK] Dependencies installed" -ForegroundColor Green
 
-# ── 6. Install Foundry Local CLI ──────────────────────────────────────────────
-Write-Host "Checking Foundry Local CLI ..." -ForegroundColor Yellow
-$foundryInstalled = Get-Command foundry -ErrorAction SilentlyContinue
-if (-not $foundryInstalled) {
-    Write-Host "  Installing Foundry Local CLI via winget ..." -ForegroundColor Yellow
-    winget install Microsoft.FoundryLocal --accept-package-agreements --accept-source-agreements
-    Write-Host "[OK] Foundry Local CLI installed" -ForegroundColor Green
-} else {
-    Write-Host "[OK] Foundry Local CLI already installed" -ForegroundColor Green
-}
-
-# ── 7. Pre-download models ────────────────────────────────────────────────────
+# ── 6. Pre-download models via the Foundry Local SDK ──────────────────────────
 Write-Host ""
-Write-Host "Pre-downloading AI models (this may take several minutes) ..." -ForegroundColor Yellow
-Write-Host "  Models are cached locally — download only happens once." -ForegroundColor DarkGray
+Write-Host "Pre-downloading AI models via the SDK (cached locally; one-time) ..." -ForegroundColor Yellow
 
 $downloadModels = Read-Host "Download models now? (Y/n)"
 if ($downloadModels -ne "n" -and $downloadModels -ne "N") {
-    Write-Host "  Downloading whisper-base ..." -ForegroundColor Cyan
-    foundry model run whisper-base --non-interactive 2>&1 | Out-Null
-    Write-Host "  [OK] whisper-base ready" -ForegroundColor Green
+    $chatAlias = if ($env:LLM_MODEL) { $env:LLM_MODEL } else { "qwen2.5-0.5b" }
+    $sttAlias = if ($env:STT_MODEL) { $env:STT_MODEL } else { "nemotron-speech-streaming-en-0.6b" }
 
-    Write-Host "  Downloading nemotron-nano ..." -ForegroundColor Cyan
-    foundry model run nemotron-nano --non-interactive 2>&1 | Out-Null
-    Write-Host "  [OK] nemotron-nano ready" -ForegroundColor Green
+    Write-Host "  Prefetching $sttAlias and $chatAlias via SDK ..." -ForegroundColor Cyan
+    python scripts\prefetch.py $sttAlias $chatAlias
 }
 
 # ── 8. Create .env from template ──────────────────────────────────────────────
