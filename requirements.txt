@@ -23,7 +23,7 @@ pyttsx3>=2.99                     # offline TTS — Windows (SAPI5), macOS (NSSp
 python-dotenv>=1.2.2              # loads .env into os.environ
 
 # ── Terminal UI ───────────────────────────────────────────────────────────────
-rich>=13.7.0                      # coloured console output, panels, syntax highlighting
+rich>=15.0.0                      # coloured console output, panels, syntax highlighting
 
 # ── Web UI (FastAPI chat interface) ───────────────────────────────────────────
 fastapi>=0.136.1                  # web framework
