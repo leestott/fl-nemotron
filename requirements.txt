@@ -11,7 +11,7 @@ numpy>=1.26.0                     # audio array processing
 scipy>=1.13.0                     # WAV file writing (scipy.io.wavfile)
 
 # ── Text-to-speech ────────────────────────────────────────────────────────────
-pyttsx3>=2.90                     # offline TTS — Windows (SAPI5), macOS (NSSpeech), Linux (espeak)
+pyttsx3>=2.99                     # offline TTS — Windows (SAPI5), macOS (NSSpeech), Linux (espeak)
 
 # edge-tts is optional: neural voices but requires network access
 # Uncomment the next line to enable edge-tts support:
