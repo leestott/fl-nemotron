@@ -3,7 +3,50 @@
 [![CI](https://github.com/leestott/fl-nemotron/actions/workflows/ci.yml/badge.svg)](https://github.com/leestott/fl-nemotron/actions/workflows/ci.yml)
 [![Security Scans](https://github.com/leestott/fl-nemotron/actions/workflows/security.yml/badge.svg)](https://github.com/leestott/fl-nemotron/actions/workflows/security.yml)
 
-A fully on-device voice assistant built with **Microsoft Foundry Local** and **NVIDIA Nemotron**. Speech is transcribed locally by Whisper, reasoned over by Nemotron, and spoken back via pyttsx3 — no cloud endpoints, no API keys, no data leaving your device.
+A fully on-device voice assistant built with **Microsoft Foundry Local** and **NVIDIA Nemotron Speech Streaming**. Speech is transcribed locally by the Nemotron 0.6 B streaming STT model, reasoned over by a Foundry Local chat LLM, and spoken back via pyttsx3 — no cloud endpoints, no API keys, no data leaving your device.
+
+---
+
+## ⚠️ Required version — `foundry-local-sdk >= 1.1.0`
+
+> **You MUST use `foundry-local-sdk` version **1.1.0 or newer**.**
+> The NVIDIA Nemotron Speech Streaming model (`nemotron-speech-streaming-en-0.6b`) is only published in the 1.1.x catalog. Older SDKs (0.5.x and earlier) cannot see the model and will fail with *"model not found"*.
+
+Install (or upgrade) with the exact pin used by this project:
+
+```bash
+pip install --upgrade "foundry-local-sdk>=1.1.0,<2"
+```
+
+Verify before doing anything else:
+
+```powershell
+python -c "import importlib.metadata as m; print('sdk', m.version('foundry-local-sdk')); print('core', m.version('foundry-local-core'))"
+```
+
+Expected output:
+
+```
+sdk 1.1.0
+core 1.1.0
+```
+
+If you see `0.5.x`, `0.6.x`, or `ModuleNotFoundError: foundry_local`, you are on the wrong version. Run:
+
+```bash
+pip uninstall -y foundry-local foundry-local-sdk
+pip install "foundry-local-sdk>=1.1.0,<2"
+```
+
+> Note: the module name also changed in 1.1.0 — it is now `foundry_local_sdk` (with the underscore-`sdk` suffix), **not** `foundry_local`. All code in this repo imports the new name. The 1.1.x SDK also bundles `foundry-local-core` as a pip wheel, so no separate `winget` / MSI install is required.
+
+### Full version matrix
+
+| Component | Required version | Notes |
+|---|---|---|
+| Python | **3.11+** | Tested on 3.11–3.13. |
+| `foundry-local-sdk` | **>= 1.1.0, < 2** | First version with Nemotron Speech Streaming in the catalog. |
+| `foundry-local-core` | **>= 1.1.0** | Bundled by the SDK — installed automatically. |
 
 ---
 
@@ -13,17 +56,17 @@ A fully on-device voice assistant built with **Microsoft Foundry Local** and **N
 Microphone
     │
     ▼  (sounddevice)
-  WAV file  ──►  Whisper (Foundry Local)  ──►  Transcript text
-                                                      │
-                                                      ▼
-                                          Nemotron (Foundry Local)
-                                          + Conversation history
-                                                      │
-                                                      ▼
-                                          Response text  ──►  pyttsx3 TTS  ──►  Speakers
+  WAV file  ──►  Nemotron Speech Streaming En 0.6b (Foundry Local)  ──►  Transcript text
+                                                                             │
+                                                                             ▼
+                                                                 Chat LLM (Foundry Local)
+                                                                 + Conversation history
+                                                                             │
+                                                                             ▼
+                                                                 Response text  ──►  pyttsx3 TTS  ──►  Speakers
 ```
 
-All three stages — capture, transcription, and generation — run in-process via the Foundry Local SDK. The optional HTTP service layer exposes an OpenAI-compatible endpoint for integration with other tools.
+All three stages — capture, transcription, and generation — run in-process via the Foundry Local SDK 1.1.x. Each loaded model exposes its own OpenAI-compatible client (`get_chat_client()` / `get_audio_client()`) — no separate `openai` Python client is required.
 
 ---
 
@@ -31,10 +74,10 @@ All three stages — capture, transcription, and generation — run in-process v
 
 | Requirement | Version | Notes |
 |---|---|---|
-| Python | 3.11+ | Required by Foundry Local SDK |
-| Foundry Local CLI | Latest | `winget install Microsoft.FoundryLocal` (Windows) |
-| Node.js | Optional | Speeds up model catalog queries |
-| Microphone | Any | For voice input modes |
+| Python | **3.11+** | Required by Foundry Local SDK. |
+| `foundry-local-sdk` | **>=1.1.0,<2** | See [Required versions](#required-versions--read-this-first). |
+| `foundry-local-core` | **>=1.1.0** | Bundled as a pip wheel by the SDK — no separate install. |
+| Microphone | Any | For voice input modes. |
 
 ---
 
@@ -63,11 +106,7 @@ python -m venv .venv
 # Windows:  .venv\Scripts\activate
 # macOS/Linux: source .venv/bin/activate
 
-# Windows (recommended — enables NPU/GPU via WinML):
-pip install foundry-local-sdk-winml
-# macOS/Linux:
-pip install foundry-local-sdk
-
+pip install 'foundry-local-sdk>=1.1.0,<2'
 pip install -r requirements.txt
 cp .env.example .env
 ```
@@ -76,22 +115,51 @@ cp .env.example .env
 
 ## Model Download
 
-The setup script downloads models automatically. To download manually:
-
-```bash
-# List all available models
-foundry model ls
-
-# Download the models used by this app
-foundry model run whisper-base
-foundry model run nemotron-nano
-```
-
-Or from Python:
+All model lifecycle operations go through the **Foundry Local Python SDK 1.1.x** — no CLI required. The setup script pre-downloads models automatically. To download manually from Python:
 
 ```python
+from foundry_local_sdk import Configuration, FoundryLocalManager
+
+FoundryLocalManager.initialize(Configuration(app_name="fl-nemotron"))
+mgr = FoundryLocalManager.instance
+
+stt = mgr.catalog.get_model("nemotron-speech-streaming-en-0.6b")
+chat = mgr.catalog.get_model("qwen2.5-0.5b")
+for m in (stt, chat):
+    if not m.is_cached:
+        m.download()
+    if not m.is_loaded:
+        m.load()
+```
+
+Or use the bundled helper to download by alias without quoting hell:
+
+```bash
+python scripts/prefetch.py nemotron-speech-streaming-en-0.6b qwen2.5-0.5b
+```
+
+List the catalog the same way:
+
+```bash
 python src/utils.py --list-models
 ```
+
+---
+
+## Model Recommendations by Hardware
+
+Foundry Local automatically selects the best execution provider (CPU, GPU, NPU) for your hardware when you pass a model **alias**. Use the table below to pick a chat-model alias that matches your machine, then set `LLM_MODEL` (chat LLM) and `STT_MODEL` (speech-to-text) in `.env` accordingly.
+
+| Hardware tier | RAM | Recommended chat alias | STT alias | Notes |
+|---|---|---|---|---|
+| Low-end laptop / no GPU | 8 GB | `qwen2.5-0.5b` | `nemotron-speech-streaming-en-0.6b` | Fastest cold-start; **project defaults**. |
+| Mid-range CPU | 16 GB | `phi-4-mini` or `qwen2.5-1.5b` | `nemotron-speech-streaming-en-0.6b` | Solid quality / latency balance. |
+| Discrete GPU (≥ 8 GB VRAM) | 16–32 GB | `mistral-nemo-12b-instruct` | `nemotron-speech-streaming-en-0.6b` | Closest “NeMo”-class chat model in the catalog. |
+| High-end GPU (≥ 16 GB VRAM) | 32 GB+ | `qwen2.5-14b` or `gpt-oss-20b` | `nemotron-speech-streaming-en-0.6b` | Best quality; longer first-load. |
+| Reasoning workloads | 32 GB+ | `phi-4-mini-reasoning` or `deepseek-r1-7b` | `nemotron-speech-streaming-en-0.6b` | Use for the Q&A and code scenarios. |
+| Copilot+ PC (NPU) | 16 GB+ | `phi-4-mini` | `nemotron-speech-streaming-en-0.6b` | SDK picks the NPU execution provider automatically. |
+
+> **Note on Nemotron:** `nemotron-speech-streaming-en-0.6b` is the NVIDIA Nemotron speech-to-text model and is the project's exclusive STT engine. NVIDIA Nemotron *chat* LLMs are not yet in the Foundry Local catalog — the app uses `qwen2.5-0.5b` by default for chat and falls back automatically through `qwen2.5-0.5b → qwen2.5-1.5b → phi-4-mini → mistral-nemo-12b-instruct`. The STT model has **no fallback by design**; if the Nemotron alias is missing from your local catalog you need foundry-local-sdk >= 1.1.0. Transcription additionally requires a foundry-local-core build whose ONNX Runtime GenAI registers the `nemotron_speech` multi-modal model type — if it doesn't, the API returns a `nemotron_stt_unsupported` error.
 
 ---
 
@@ -217,17 +285,17 @@ Copy `.env.example` to `.env` and edit as needed. All settings have sensible def
 
 | Variable | Default | Description |
 |---|---|---|
-| `NEMOTRON_MODEL` | `nemotron-nano` | Foundry Local model alias for Nemotron |
-| `WHISPER_MODEL` | `whisper-base` | Foundry Local model alias for Whisper |
-| `MAX_TOKENS` | `256` | Maximum tokens in Nemotron's response |
-| `TEMPERATURE` | `0.7` | Sampling temperature (0.0 = deterministic) |
-| `STREAM_RESPONSE` | `true` | Stream tokens to terminal as they arrive |
-| `TTS_ENGINE` | `pyttsx3` | `pyttsx3` (offline) or `edge-tts` (online, neural) |
-| `TTS_RATE` | `175` | Speech rate in words per minute |
-| `SILENCE_THRESHOLD` | `0.01` | RMS energy below which audio is treated as silence |
-| `SILENCE_DURATION` | `1.5` | Seconds of silence before auto-stop |
-| `HISTORY_LIMIT` | `10` | Max conversation turns kept in context |
-| `DEBUG` | `false` | Enable verbose logging |
+| `LLM_MODEL` | `qwen2.5-0.5b` | Foundry Local chat model alias. |
+| `STT_MODEL` | `nemotron-speech-streaming-en-0.6b` | Foundry Local STT model alias (NVIDIA Nemotron Speech Streaming). |
+| `MAX_TOKENS` | `256` | Maximum tokens in the chat response. |
+| `TEMPERATURE` | `0.7` | Sampling temperature (0.0 = deterministic). |
+| `STREAM_RESPONSE` | `true` | Stream tokens to terminal as they arrive. |
+| `TTS_ENGINE` | `pyttsx3` | `pyttsx3` (offline) or `edge-tts` (online, neural). |
+| `TTS_RATE` | `175` | Speech rate in words per minute. |
+| `SILENCE_THRESHOLD` | `0.01` | RMS energy below which audio is treated as silence. |
+| `SILENCE_DURATION` | `1.5` | Seconds of silence before auto-stop. |
+| `HISTORY_LIMIT` | `10` | Max conversation turns kept in context. |
+| `DEBUG` | `false` | Enable verbose logging. |
 
 ### Listing Available Models
 
@@ -251,7 +319,7 @@ Set `DEVICE_INDEX` in `.env` to use a specific microphone.
 fl-nemotron/
 ├── src/
 │   ├── voice_assistant.py      # Main orchestration loop
-│   ├── foundry_client.py       # Foundry Local SDK wrapper (Nemotron + Whisper)
+│   ├── foundry_client.py       # Foundry Local SDK wrapper (Nemotron chat + Nemotron STT)
 │   ├── speech_handler.py       # Microphone capture, VAD, TTS
 │   ├── config.py               # All configuration (dataclasses + dotenv)
 │   └── utils.py                # Model listing, audio validation helpers
@@ -278,7 +346,7 @@ fl-nemotron/
 | Network required | ❌ Works fully offline | ✅ Always required |
 | Per-token cost | ✅ Zero | ❌ Pay-per-use |
 | Model control | ✅ Open weights, customisable | ❌ Proprietary, managed |
-| Voice / multimodal | ⚠️ Separate Whisper model | ✅ Native in some APIs |
+| Voice / multimodal | ✅ Native via Nemotron Speech Streaming | ✅ Native in some APIs |
 | Setup complexity | Medium | Low |
 
 Nemotron is particularly well-suited to this scenario because it is open-weight, designed for enterprise deployment across cloud/hybrid/edge, and optimised for long-running agentic workflows — exactly the profile you need for a locally-hosted voice assistant.
@@ -288,10 +356,13 @@ Nemotron is particularly well-suited to this scenario because it is open-weight,
 ## Troubleshooting
 
 **`No module named 'foundry_local_sdk'`**
-Install the SDK: `pip install foundry-local-sdk` (or `foundry-local-sdk-winml` on Windows).
+Install the SDK at the required version: `pip install 'foundry-local-sdk>=1.1.0,<2'`. If you previously installed the older 0.5.x SDK, uninstall it first: `pip uninstall foundry-local foundry-local-sdk` then reinstall.
 
-**`Model 'nemotron-nano' not found in catalog`**
-Run `foundry model ls` to see available models. Update `NEMOTRON_MODEL` in `.env` to match an available alias.
+**`Model 'nemotron-speech-streaming-en-0.6b' not found in catalog`**
+You are almost certainly on an older SDK. Upgrade with `pip install --upgrade 'foundry-local-sdk>=1.1.0,<2'` and re-run `python src/utils.py --list-models` to verify the model appears.
+
+**`Model '<alias>' not found in catalog`**
+Run `python src/utils.py --list-models` to see available aliases. Update `LLM_MODEL` (chat) or `STT_MODEL` (speech-to-text) in `.env` to match an available alias.
 
 **No microphone audio / silent recordings**
 Run `python src/utils.py --list-mics` to list devices. Set `DEVICE_INDEX` in `.env` to the correct device number.

@@ -32,9 +32,9 @@ _RESPONSES: dict[str, str] = {
         "so subsequent launches are instant. The OpenAI-compatible API means you can switch "
         "between local and cloud inference with a single line change."
     ),
-    "whisper": (
-        "Whisper is OpenAI's automatic speech recognition model. "
-        "In this application, Whisper runs locally via Foundry Local — "
+    "nemotron-stt": (
+        "Nemotron Speech Streaming is NVIDIA's on-device automatic speech recognition model. "
+        "In this application it runs locally via Microsoft Foundry Local — "
         "your audio never leaves your device during transcription."
     ),
     "onnx": (
@@ -49,10 +49,11 @@ _RESPONSES: dict[str, str] = {
         "There are no outbound API calls after the initial one-time model download."
     ),
     "install": (
-        "On Windows: winget install Microsoft.FoundryLocal. "
-        "On macOS: brew install microsoft/foundrylocal/foundrylocal. "
-        "After installing, run: foundry model run nemotron-nano to download the model, "
-        "then start this app with: uvicorn app:app --app-dir src --port 8000"
+        "Install the SDK with: pip install 'foundry-local-sdk>=1.1.0'. "
+        "Then from Python: from foundry_local_sdk import Configuration, FoundryLocalManager; "
+        "FoundryLocalManager.initialize(Configuration(app_name='fl-nemotron')); "
+        "FoundryLocalManager.instance.catalog.get_model('nemotron-speech-streaming-en-0.6b').download(). "
+        "Start this app with: uvicorn app:app --app-dir src --port 8000"
     ),
     "build": (
         "Microsoft Build 2026 is June 2–3 at Fort Mason Center, San Francisco, and online. "
@@ -65,13 +66,14 @@ _RESPONSES: dict[str, str] = {
     ),
     "voice": (
         "This voice assistant captures microphone audio via sounddevice, transcribes it with "
-        "Whisper locally, sends the transcript to Nemotron for reasoning, and speaks the response "
-        "using pyttsx3 — all on-device, with zero cloud dependency after model download."
+        "NVIDIA Nemotron Speech Streaming locally, sends the transcript to a chat LLM for reasoning, "
+        "and speaks the response using pyttsx3 — all on-device, with zero cloud dependency after model download."
     ),
     "demo": (
         "Demo mode is active because Foundry Local is not running on this machine. "
         "Responses are simulated with keyword matching. For real AI inference, install "
-        "Foundry Local and run: foundry model run nemotron-nano, then restart this app."
+        "the SDK (pip install 'foundry-local-sdk>=1.1.0') and download a model via the SDK catalog, "
+        "then restart this app."
     ),
 }
 
@@ -79,7 +81,7 @@ _DEFAULT_RESPONSE = (
     "I'm running in demo mode — Foundry Local is not currently active on this device. "
     "In production, this response would come from NVIDIA Nemotron running entirely locally "
     "via Microsoft Foundry Local, with no data leaving your machine. "
-    "Try asking about: Nemotron, Foundry Local, Whisper, ONNX, privacy, or installation."
+    "Try asking about: Nemotron, Foundry Local, Nemotron STT, ONNX, privacy, or installation."
 )
 
 _DEMO_TRANSCRIPTIONS = [
@@ -94,7 +96,7 @@ _DEMO_TRANSCRIPTIONS = [
 
 class DemoClient:
     """
-    Mock AI client that simulates Nemotron + Whisper responses.
+    Mock AI client that simulates Nemotron chat + Nemotron STT responses.
 
     Used when Foundry Local SDK is not installed or the service is not running.
     Supports the same interface as FoundryClient for drop-in replacement.
