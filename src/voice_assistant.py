@@ -5,7 +5,7 @@ Implements a press-to-talk or voice-activity-detection (VAD) conversation loop:
 
   1. Wait for the user (press ENTER or speak above threshold)
   2. Record speech via MicrophoneRecorder
-  3. Transcribe audio → text via local Whisper (FoundryClient)
+  3. Transcribe audio → text via local Nemotron STT (FoundryClient)
   4. Send transcript to Nemotron with conversation history → get response
   5. Speak response via TextToSpeech
   6. Repeat
@@ -124,7 +124,7 @@ class VoiceAssistant:
                 f"[green]✓ Nemotron ({self._config.nemotron.model_alias}) loaded[/green]"
             )
             console.print(
-                f"[green]✓ Whisper  ({self._config.whisper.model_alias}) loaded[/green]"
+                f"[green]✓ Nemotron STT  ({self._config.stt.model_alias}) loaded[/green]"
             )
             console.print()
             self._tts.speak("Hello! I am your Nemotron voice assistant, running entirely on your device.")

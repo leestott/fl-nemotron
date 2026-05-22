@@ -16,7 +16,7 @@ load_dotenv()
 @dataclass
 class AudioConfig:
     """Microphone capture and audio processing settings."""
-    sample_rate: int = 16_000          # Hz — Whisper expects 16 kHz
+    sample_rate: int = 16_000          # Hz — 16 kHz mono is standard for STT
     channels: int = 1                  # Mono
     record_seconds: float = 5.0        # Max recording window per utterance
     silence_threshold: float = 0.01    # RMS below this = silence
@@ -26,21 +26,31 @@ class AudioConfig:
 
 
 @dataclass
-class WhisperConfig:
-    """Foundry Local Whisper model settings."""
+class SpeechConfig:
+    """Foundry Local speech-to-text model settings.
+
+    Uses NVIDIA Nemotron Speech Streaming En 0.6b exclusively. Requires
+    foundry-local-sdk >= 1.1.0 and a foundry-local-core build that registers
+    the `nemotron_speech` multi-modal model type.
+    """
     model_alias: str = field(
-        default_factory=lambda: os.getenv("WHISPER_MODEL", "whisper-base")
+        default_factory=lambda: os.getenv("STT_MODEL", "nemotron-speech-streaming-en-0.6b")
     )
     language: str = field(
-        default_factory=lambda: os.getenv("WHISPER_LANGUAGE", "en")
+        default_factory=lambda: os.getenv("STT_LANGUAGE", "en")
     )
 
 
 @dataclass
 class NemotronConfig:
-    """Foundry Local Nemotron (LLM) model settings."""
+    """Foundry Local chat (LLM) model settings.
+
+    NVIDIA Nemotron *chat* LLMs are not yet in the Foundry Local catalog; the closest
+    in-catalog default is `qwen2.5-0.5b`. The app falls back automatically if the
+    requested alias is unavailable. Requires foundry-local-sdk >= 1.1.0.
+    """
     model_alias: str = field(
-        default_factory=lambda: os.getenv("NEMOTRON_MODEL", "qwen2.5-0.5b")
+        default_factory=lambda: os.getenv("LLM_MODEL", "qwen2.5-0.5b")
     )
     system_prompt: str = field(
         default_factory=lambda: os.getenv(
@@ -99,7 +109,7 @@ class AppConfig:
     )
 
     audio: AudioConfig = field(default_factory=AudioConfig)
-    whisper: WhisperConfig = field(default_factory=WhisperConfig)
+    stt: SpeechConfig = field(default_factory=SpeechConfig)
     nemotron: NemotronConfig = field(default_factory=NemotronConfig)
     tts: TTSConfig = field(default_factory=TTSConfig)
 
