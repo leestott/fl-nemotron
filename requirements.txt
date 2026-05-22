@@ -6,7 +6,7 @@ foundry-local-sdk>=1.1.0
 openai>=1.30.0
 
 # ── Audio capture ─────────────────────────────────────────────────────────────
-sounddevice>=0.4.6                # cross-platform microphone I/O
+sounddevice>=0.5.5                # cross-platform microphone I/O
 numpy>=1.26.0                     # audio array processing
 scipy>=1.13.0                     # WAV file writing (scipy.io.wavfile)
 
