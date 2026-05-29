@@ -5,7 +5,7 @@
 # Earlier versions (0.5.x) cannot parse the newer catalog entries and the model
 # will appear missing. The 1.1.x SDK also bundles the foundry-local-core native
 # runtime as a pip wheel — no separate winget/MSI install needed.
-foundry-local-sdk>=1.1.0,<2
+foundry-local-sdk>=1.2.0,<2
 
 # OpenAI-compatible client (points at local Foundry endpoint — no key required)
 openai>=2.38.0
