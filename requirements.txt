@@ -29,6 +29,6 @@ python-dotenv>=1.2.2              # loads .env into os.environ
 rich>=15.0.0                      # coloured console output, panels, syntax highlighting
 
 # ── Web UI (FastAPI chat interface) ───────────────────────────────────────────
-fastapi>=0.136.1                  # web framework
+fastapi>=0.136.3                  # web framework
 uvicorn[standard]>=0.29.0         # ASGI server
 python-multipart>=0.0.29           # multipart/form-data for audio upload endpoint
